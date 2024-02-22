@@ -3,9 +3,7 @@ package springstudy.spring5recipe.sequence;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
-
+@DataPrefixAnnotation
 public class DatePrefixGenerator implements PrefixGenerator {
 	private DateTimeFormatter formatter;
 

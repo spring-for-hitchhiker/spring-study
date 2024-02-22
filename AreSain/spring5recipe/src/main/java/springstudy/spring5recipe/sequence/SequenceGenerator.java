@@ -2,7 +2,11 @@ package springstudy.spring5recipe.sequence;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import jakarta.annotation.Resource;
+
 public class SequenceGenerator {
+	@Resource
+
 	private PrefixGenerator prefixGenerator;
 	private String suffix;
 	private int initial;
