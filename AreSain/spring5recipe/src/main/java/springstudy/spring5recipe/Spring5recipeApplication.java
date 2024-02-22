@@ -5,6 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import springstudy.spring5recipe.sequence.SequenceGenerator;
+import springstudy.spring5recipe.sequence.config.SequenceConfiguration;
 import springstudy.spring5recipe.shop.Product;
 import springstudy.spring5recipe.shop.config.ShopConfiguration;
 
@@ -12,14 +14,14 @@ import springstudy.spring5recipe.shop.config.ShopConfiguration;
 public class Spring5recipeApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(Spring5recipeApplication.class, args);
-		ApplicationContext context =
-			new AnnotationConfigApplicationContext(ShopConfiguration.class);
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+		context.register(SequenceConfiguration.class);
+		context.refresh();
 
-		Product aaa = context.getBean("aaa", Product.class);
-		Product cdrw = context.getBean("cdrw", Product.class);
+		SequenceGenerator generator =
+			(SequenceGenerator)context.getBean("sequenceGenerator");
 
-		System.out.println(aaa);
-		System.out.println(cdrw);
+		System.out.println(generator.getSequence());
+		System.out.println(generator.getSequence());
 	}
 }
