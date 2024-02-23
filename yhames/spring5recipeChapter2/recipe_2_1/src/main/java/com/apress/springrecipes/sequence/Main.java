@@ -1,6 +1,5 @@
 package com.apress.springrecipes.sequence;
 
-import com.sun.xml.internal.ws.model.AbstractWrapperBeanGenerator;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 

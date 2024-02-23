@@ -9,8 +9,8 @@
       - [`gradle` 버전 변경](#gradle-버전-변경)
     - [IoC 컨테이너](#ioc-컨테이너)
       - [ApplicationContext](#applicationcontext)
+      - [@Configuration](#configuration)
       - [getBean()](#getbean)
-    - [`@Configuration`과 `@Bean`](#configuration과-bean)
 
 ## 레시피 2-1 : 자바로 POJO 구성하기
 
@@ -187,12 +187,15 @@ CONFIGURE SUCCESSFUL in 11s
 
 `ApplicationContext`에는 `AnnotationConfigApplicationContext`를 제외하고 `XML`, `JavaConfig`, `GroovyConfig` 등 다양한 설정 방법이 있다. 
 
-![Application_Context.png](/images/Application_Context.png)
+![Application_Context.png](/yhames/images/Application_Context.png)
 
 ```mermaid
 graph TD
  
-Beanfactory --> ApplicationContext --> ConfigurableApplicationContext --> AbstractApplicationContext
+Beanfactory --> HierarchicalBeanFactory --> ApplicationContext
+Beanfactory --> ListableBeanFactory --> ApplicationContext
+
+ApplicationContext --> ConfigurableApplicationContext --> AbstractApplicationContext
 
 AbstractApplicationContext -->  AbstractRefreshableApplicationContext --> AbstractRefreshableConfigApplicationContext --> AbstractXmlApplicationContext
  
@@ -213,6 +216,35 @@ GenericApplicationContext --> AnnotationConfigApplicationContext
 ```
 
 여기서는 `AnnotationConfigApplicationContext`을 사용한다.
+
+#### @Configuration
+
+`@Configuration`은 해당 클래스가 구성 클래스 임을 알리는 어노테이션이다.
+
+`AnnotationConfigApplicationContext`에서는 런타임에 해당 어노테이션을 확인하고 `@Bean` 어노테이션이 붙은 메서드를 찾아 이를 `컨테이너`에 `빈`으로 등록한다.
+
+실행 흐름은 다음과 같다.
+
+```mermaid
+graph TD
+AnnotationConfigApplicationContext.constructor --> AnnotationConfigApplicationContext.register --> AnnotatedBeanDefinitionReader.register --> AnnotatedBeanDefinitionReader.registerBean --> AnnotatedBeanDefinitionReader.doRegisterBean --> BeanDefinitionReaderUtils.registerBeanDefinition --> GenericApplicationContext.registerBeanDefinition --> DefaultListableBeanFactory.registerBeanDefinition --> Map["beanDefinitionMap.put(beanName, beanDefinition)"] --> List["beanDefinitionNames.add(beanName)"]
+```
+
+`beanDefinitionMap`과 `beanDefinitionNames`은 다음과 같은 자료구조를 갖는다.
+
+```java
+public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable {
+    // ...
+	private final Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
+
+	private volatile List<String> beanDefinitionNames = new ArrayList<>(256);
+    // ...
+}
+```
+
+따라서 `IoC 컨테이너`는 `beanDefinitionMap`을 의미하고 `Map<String, BeanDefinition>`을 사용하고 있다는 것을 알 수 있다. 추가적으로 `beanDefinitionNames`를 갖는 `List<String>`를 사용하고 있다는 것을 알 수 있다.
+
+또한 `BeanDefinition` 타입을 따로 지정하여 추가적인 메타정보를 가지고 있을 것으로 보인다.
 
 #### getBean()
 
@@ -240,7 +272,35 @@ public interface BeanFactory {
 
 기본적으로 `등록된 빈의 이름`을 사용하며, 해당 클래스로 등록된 빈이 **오직 1개**라면 이름을 생략하고 `클래스 정보`만으로 가져올 수 있다.
 
+`getBean()`의 구현체는 `AbstractApplicationContext`에 정의되어 있다.
 
-### `@Configuration`과 `@Bean`
 
+```java
+public abstract class AbstractApplicationContext extends DefaultResourceLoader implements ConfigurableApplicationContext {
+    // ...
+	@Override
+	public <T> T getBean(Class<T> requiredType) throws BeansException {
+		assertBeanFactoryActive();
+		return getBeanFactory().getBean(requiredType);
+	}
+    // ...
+}
+```
 
+`getBeanFactory()` 메서드는 `GenericApplicationContext` 클래스에 정의된 `DefaultListableBeanFactory beanFactory`를 가져오고, `DefaultListableBeanFactory.getBean()` 메서드를 호출한다.
+
+```mermaid
+graph TD
+AbstractApplicationContext.getBean --> AbstractApplicationContext.getBeanFactory --> DefaultListableBeanFactory.getBean --> DefaultListableBeanFactory.resolveBean
+
+DefaultListableBeanFactory.resolveBean --> DefaultListableBeanFactory.resolveNamedBean --> DefaultListableBeanFactory.getBeanNamesForType --> DefaultListableBeanFactory.doGetBeanNamesForType --> loop["for(String beanName: beanDefinitionNames)"] --> |NamedBeanHolder namedBean|DefaultListableBeanFactory.resolveBean
+
+DefaultListableBeanFactory.resolveBean --> |NamedBeanHolder namedBean|namedBean.getInstance
+```
+
+`getBean()` 함수의 플로우를 따라가다보면
+`DefaultListableBeanFactory.doGetBeanNamesForType` 함수에서 `beanDefinitionNames`를 순회하여 해당 클래스의 `빈 이름`을 찾고
+
+`DefaultListableBeanFactory.resolveNamedBean`에서 `AbstractBeanFactory.getBean()` 메서드를 호출하여 해당 `인스턴스`를 가져오고, 빈 이름과 인스턴스를 사용하여 `NamedBeanHolder` 객체(`namedBean`)를 반환한다.
+
+ `NamedBeanHolder`는 beanName과 해당 Instance를 필드로 갖는 클래스이다. 마지막으로 `namedBean.getInstance()` 메서드를 사용하여 해당 인스턴스를 반환하면 로직이 종료된다.
