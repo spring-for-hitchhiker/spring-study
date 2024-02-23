@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+//    compile group: 'org.springframework', name: 'spring-context', version: '5.3.32'   // deprecated gradle ^4.6
+    implementation group: 'org.springframework', name: 'spring-context', version: '5.3.32'
+}
+
+jar {
+    manifest.attributes('Main-Class': 'com.apress.springrecipes.sequence.Main')
+}

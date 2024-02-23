@@ -7,10 +7,14 @@
       - [`repositories` 추가](#repositories-추가)
       - [`version` 추가](#version-추가)
       - [`gradle` 버전 변경](#gradle-버전-변경)
+      - [compile()](#compile)
     - [IoC 컨테이너](#ioc-컨테이너)
       - [ApplicationContext](#applicationcontext)
       - [@Configuration](#configuration)
       - [getBean()](#getbean)
+    - [스프링 빈 등록](#스프링-빈-등록)
+      - [`AnnotationConfigRegistry`](#annotationconfigregistry)
+      - [`@ComponentScan`](#componentscan)
 
 ## 레시피 2-1 : 자바로 POJO 구성하기
 
@@ -170,6 +174,10 @@ Gradle Daemon started in 681 ms
 CONFIGURE SUCCESSFUL in 11s
 ```
 
+#### compile()
+
+`gradle ^4.6` 부터는 `compile()`이 `deprecated` 되었기 때문에 `implementation`을 사용해야한다.
+
 ### IoC 컨테이너
 
 `IoC 컨테이너`에는 `BeanFactory`와 `ApplicationContext`가 있다.
@@ -221,7 +229,7 @@ GenericApplicationContext --> AnnotationConfigApplicationContext
 
 `@Configuration`은 해당 클래스가 구성 클래스 임을 알리는 어노테이션이다.
 
-`AnnotationConfigApplicationContext`에서는 런타임에 해당 어노테이션을 확인하고 `@Bean` 어노테이션이 붙은 메서드를 찾아 이를 `컨테이너`에 `빈`으로 등록한다.
+`AnnotationConfigApplicationContext`에서는 `AnnotationConfigRegistry`를 구현한 `register()` 메서드를 호출하여 런타임에 해당 어노테이션을 확인하고 `@Bean` 어노테이션이 붙은 메서드를 찾아 이를 `컨테이너`에 `빈`으로 등록한다.
 
 실행 흐름은 다음과 같다.
 
@@ -304,3 +312,62 @@ DefaultListableBeanFactory.resolveBean --> |NamedBeanHolder namedBean|namedBean.
 `DefaultListableBeanFactory.resolveNamedBean`에서 `AbstractBeanFactory.getBean()` 메서드를 호출하여 해당 `인스턴스`를 가져오고, 빈 이름과 인스턴스를 사용하여 `NamedBeanHolder` 객체(`namedBean`)를 반환한다.
 
  `NamedBeanHolder`는 beanName과 해당 Instance를 필드로 갖는 클래스이다. 마지막으로 `namedBean.getInstance()` 메서드를 사용하여 해당 인스턴스를 반환하면 로직이 종료된다.
+
+### 스프링 빈 등록
+
+#### `AnnotationConfigRegistry`
+
+`AnnotationConfigApplicationContext`는 `AnnotationConfigRegistry` 인터페이스를 구현한다.
+
+```mermaid
+graph TD
+AnnotationConfigRegistry --> AnnotationConfigApplicationContext
+```
+
+다음은 `AnnotationConfigRegistry` 인터페이스에 정의된 메서드이다.
+
+```java
+public interface AnnotationConfigRegistry {
+
+	void register(Class<?>... componentClasses);
+
+	void scan(String... basePackages);
+
+}
+```
+
+`AnnotationConfigApplicationContext`에서는 `AnnotationConfigRegistry`에 정의된 메서드를 다음과 같이 구현한다.
+
+```java
+public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
+    // ...
+
+	@Override
+	public void register(Class<?>... componentClasses) {
+		Assert.notEmpty(componentClasses, "At least one component class must be specified");
+		StartupStep registerComponentClass = getApplicationStartup().start("spring.context.component-classes.register")
+				.tag("classes", () -> Arrays.toString(componentClasses));
+		this.reader.register(componentClasses);
+		registerComponentClass.end();
+	}
+
+	@Override
+	public void scan(String... basePackages) {
+		Assert.notEmpty(basePackages, "At least one base package must be specified");
+		StartupStep scanPackages = getApplicationStartup().start("spring.context.base-packages.scan")
+				.tag("packages", () -> Arrays.toString(basePackages));
+		this.scanner.scan(basePackages);
+		scanPackages.end();
+	}
+
+    // ...
+}
+```
+
+`register()`는 위에서 본 것처럼 `@Configuration` 어노테이션이 붙은 `설정 클래스`를 직접 사용하는 방식이고,
+
+`scan()`은 `basePackages`를 기준으로 `@Component`가 붙은 모든 클래스들을 자동으로 `IoC 컨테이너`에 빈으로 등록한다.
+
+#### `@ComponentScan`
+
+`@ComponentScan`을 사용하면 `basePackages`를 직접 설정하거나 `includeFilters`와 `excludeFilters`를 사용하여 특정 클래스를 등록하거나 제외할 수 있다.
