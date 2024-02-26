@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework:spring-context:5.3.32'
+}
+
+jar {
+    manifest.attributes('Main-Class': 'com.apress.springrecipes.sequence.Main')
+}

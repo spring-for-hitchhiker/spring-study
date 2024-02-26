@@ -1,7 +1,12 @@
 package com.apress.springrecipes.shop;
 
+import javax.annotation.Resource;
+import javax.inject.Inject;
+
+@Resource
 public class Disc extends Product {
 
+    @Inject
     private int capacity;
 
     public Disc() {
