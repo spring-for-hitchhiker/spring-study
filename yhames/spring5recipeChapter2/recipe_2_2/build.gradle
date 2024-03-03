@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'org.springframework', name: 'spring-context', version: '5.3.32'
+    implementation group: 'javax.inject', name: 'javax.inject', version: '1'
+}   
+
+jar {
+    manifest.attributes('Main-Class': 'com.apress.springrecipes.shop.Main')
+}
