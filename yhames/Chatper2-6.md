@@ -25,7 +25,7 @@ public class ShopConfiguration {
 }
 ```
 
-`@PropertySource`의 옵션으로 `classpath`와 함꼐 `properties` 파일 이름을 명시하면 자바 클래스패스에서 해당 `properties` 파일을 찾습니다.
+`@PropertySource`의 옵션으로 `classpath`와 함께 `properties` 파일 이름을 명시하면 자바 클래스패스에서 해당 `properties` 파일을 찾습니다.
 
 > 클래스패스(`classpath`)란 JVM이 클래스 파일을 탐색하는 경로를 의미합니다.  
 > 파일 시스템 리소스는 `file` 접두어를 사용합니다.
